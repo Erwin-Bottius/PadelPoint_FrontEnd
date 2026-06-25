@@ -1,26 +1,22 @@
-import { StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { useRouter } from 'expo-router';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { useAuth } from '@/context/auth';
+import { Palette } from '@/constants/theme';
 
-export default function HomeScreen() {
+export default function Index() {
+  const { token, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading) return;
+    router.replace(token ? '/(app)' : '/(auth)/login');
+  }, [token, isLoading]);
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">PadelPoint</ThemedText>
-      </SafeAreaView>
-    </ThemedView>
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Palette.screenBg }}>
+      <ActivityIndicator color={Palette.accent} />
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

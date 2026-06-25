@@ -1,0 +1,480 @@
+import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
+import { SymbolView } from "expo-symbols";
+import { useState } from "react";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { FontSize, Palette, Radius, Spacing } from "@/constants/theme";
+import { useAuth, type UserRole } from "@/context/auth";
+import { ApiError } from "@/lib/api";
+
+type Step = 0 | 1;
+
+type Fields = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  passwordConfirmation: string;
+};
+
+type FieldErrors = Partial<Fields>;
+
+export default function SignupScreen() {
+  const { signUp } = useAuth();
+  const router = useRouter();
+
+  const [step, setStep] = useState<Step>(0);
+  const [fields, setFields] = useState<Fields>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    passwordConfirmation: "",
+  });
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [role, setRole] = useState<UserRole | null>(null);
+
+  function set(key: keyof Fields) {
+    return (value: string) => {
+      setFields((f) => ({ ...f, [key]: value }));
+      setFieldErrors((e) => ({ ...e, [key]: undefined }));
+    };
+  }
+
+  function validateStep0(): boolean {
+    const errors: FieldErrors = {};
+    if (!fields.firstName.trim()) errors.firstName = "Requis";
+    if (!fields.lastName.trim()) errors.lastName = "Requis";
+    if (!fields.email.trim()) errors.email = "Requis";
+    if (!fields.password) errors.password = "Requis";
+    else if (fields.password.length < 8)
+      errors.password = "Minimum 8 caractères";
+    if (!fields.passwordConfirmation) errors.passwordConfirmation = "Requis";
+    else if (fields.password !== fields.passwordConfirmation)
+      errors.passwordConfirmation = "Les mots de passe ne correspondent pas";
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
+  const { mutate: submit, isPending, error } = useMutation({
+    mutationFn: () => signUp({ ...fields, role: role! }),
+    onError: (e) => {
+      if (e instanceof ApiError && e.errors?.length) {
+        const fErrors: FieldErrors = {};
+        e.errors.forEach(({ field, message }) => {
+          if (field in fields) fErrors[field as keyof Fields] = message;
+        });
+        if (Object.keys(fErrors).length) {
+          setFieldErrors(fErrors);
+          setStep(0);
+        }
+      }
+    },
+  });
+
+  const errorMessage = error instanceof ApiError
+    ? (error.errors?.length ? null : error.message)
+    : error ? 'Une erreur est survenue.' : null;
+
+  function handleContinue() {
+    if (validateStep0()) setStep(1);
+  }
+
+  function handleSubmit() {
+    if (!role) return;
+    submit();
+  }
+
+  return (
+    <View style={styles.screen}>
+      <SafeAreaView style={styles.flex}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.flex}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.card}>
+              <View style={styles.header}>
+                <Pressable
+                  onPress={() => (step === 1 ? setStep(0) : router.back())}
+                  style={styles.backBtn}
+                >
+                  <SymbolView
+                    name={{
+                      ios: "chevron.left",
+                      android: "chevron_left",
+                      web: "chevron_left",
+                    }}
+                    size={18}
+                    tintColor={Palette.textPrimary}
+                  />
+                  <Text style={styles.backText}>Retour</Text>
+                </Pressable>
+
+                <View style={styles.steps}>
+                  <View style={[styles.step, styles.stepActive]} />
+                  <View
+                    style={[styles.step, step === 1 && styles.stepActive]}
+                  />
+                </View>
+              </View>
+
+              {step === 0 ? (
+                <>
+                  <Text style={styles.title}>Créer un compte</Text>
+                  <Text style={styles.subtitle}>
+                    Rejoignez la communauté PadelPoint
+                  </Text>
+
+                  <View style={styles.form}>
+                    <View style={styles.row}>
+                      <View style={styles.flex}>
+                        <Input
+                          label="Prénom"
+                          value={fields.firstName}
+                          onChangeText={set("firstName")}
+                          autoCapitalize="words"
+                          autoComplete="given-name"
+                          placeholder="Jean"
+                          error={fieldErrors.firstName}
+                        />
+                      </View>
+                      <View style={styles.flex}>
+                        <Input
+                          label="Nom"
+                          value={fields.lastName}
+                          onChangeText={set("lastName")}
+                          autoCapitalize="words"
+                          autoComplete="family-name"
+                          placeholder="Dupont"
+                          error={fieldErrors.lastName}
+                        />
+                      </View>
+                    </View>
+
+                    <Input
+                      label="Email"
+                      iconName={{
+                        ios: "envelope",
+                        android: "email",
+                        web: "mail",
+                      }}
+                      value={fields.email}
+                      onChangeText={set("email")}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoComplete="email"
+                      placeholder="jean@exemple.com"
+                      error={fieldErrors.email}
+                    />
+                    <Input
+                      label="Mot de passe"
+                      iconName={{
+                        ios: "lock.fill",
+                        android: "lock",
+                        web: "lock",
+                      }}
+                      value={fields.password}
+                      onChangeText={set("password")}
+                      secureTextEntry
+                      autoComplete="new-password"
+                      placeholder="Minimum 8 caractères"
+                      error={fieldErrors.password}
+                    />
+                    <Input
+                      label="Confirmer le mot de passe"
+                      iconName={{
+                        ios: "lock.fill",
+                        android: "lock",
+                        web: "lock",
+                      }}
+                      value={fields.passwordConfirmation}
+                      onChangeText={set("passwordConfirmation")}
+                      secureTextEntry
+                      autoComplete="new-password"
+                      placeholder="••••••••"
+                      error={fieldErrors.passwordConfirmation}
+                    />
+
+                    <Button onPress={handleContinue} style={styles.btn}>
+                      Continuer
+                    </Button>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.title}>Votre rôle ?</Text>
+                  <Text style={styles.subtitle}>
+                    Choisissez comment vous souhaitez utiliser PadelPoint
+                  </Text>
+
+                  <View style={styles.roleRow}>
+                    <RoleCard
+                      label="Joueur"
+                      description="Rejoignez des cours et progressez"
+                      iconName={{
+                        ios: "figure.tennis",
+                        android: "sports_tennis",
+                        web: "sports_tennis",
+                      }}
+                      selected={role === "player"}
+                      onPress={() => setRole("player")}
+                    />
+                    <RoleCard
+                      label="Professeur"
+                      description="Créez et gérez vos cours"
+                      iconName={{
+                        ios: "trophy.fill",
+                        android: "emoji_events",
+                        web: "emoji_events",
+                      }}
+                      selected={role === "teacher"}
+                      onPress={() => setRole("teacher")}
+                    />
+                  </View>
+
+                  {errorMessage ? (
+                    <Text style={styles.errorBanner}>{errorMessage}</Text>
+                  ) : null}
+
+                  <Button
+                    onPress={handleSubmit}
+                    variant="primary"
+                    loading={isPending}
+                    disabled={!role}
+                    style={styles.btn}
+                  >
+                    Créer mon compte
+                  </Button>
+                </>
+              )}
+
+              <View style={styles.divider} />
+
+              <View style={styles.toggleRow}>
+                <Text style={styles.toggleLabel}>Déjà un compte ?</Text>
+                <Pressable onPress={() => router.replace("/(auth)/login")}>
+                  <Text style={styles.toggleLink}>Se connecter</Text>
+                </Pressable>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+type RoleCardProps = {
+  label: string;
+  description: string;
+  iconName: import("expo-symbols").SymbolViewProps["name"];
+  selected: boolean;
+  onPress: () => void;
+};
+
+function RoleCard({
+  label,
+  description,
+  iconName,
+  selected,
+  onPress,
+}: RoleCardProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[styles.roleCard, selected && styles.roleCardSelected]}
+    >
+      <View
+        style={[styles.roleIconWrap, selected && styles.roleIconWrapSelected]}
+      >
+        <SymbolView
+          name={iconName}
+          size={30}
+          tintColor={selected ? Palette.link : Palette.textMuted}
+        />
+      </View>
+      <Text style={[styles.roleLabel, selected && styles.roleLabelSelected]}>
+        {label}
+      </Text>
+      <Text style={styles.roleDesc}>{description}</Text>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Palette.screenBg,
+  },
+  flex: { flex: 1 },
+
+  scroll: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.five,
+  },
+
+  card: {
+    backgroundColor: Palette.cardBg,
+    borderRadius: 24,
+    paddingHorizontal: 28,
+    paddingVertical: 28,
+    borderWidth: 1,
+    borderColor: Palette.primaryLight,
+    shadowColor: Palette.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 32,
+    elevation: 4,
+  },
+
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: Spacing.four,
+  },
+  backBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  backText: {
+    fontSize: FontSize.sm,
+    fontWeight: "600",
+    color: Palette.textPrimary,
+  },
+  steps: {
+    flexDirection: "row",
+    gap: Spacing.one,
+  },
+  step: {
+    width: 28,
+    height: 4,
+    borderRadius: Radius.full,
+    backgroundColor: Palette.border,
+  },
+  stepActive: {
+    backgroundColor: Palette.link,
+  },
+
+  title: {
+    fontSize: FontSize["2xl"],
+    fontWeight: "800",
+    color: Palette.textPrimary,
+    marginBottom: Spacing.one,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: FontSize.sm,
+    color: Palette.textSecondary,
+    lineHeight: 20,
+    marginBottom: Spacing.four,
+  },
+
+  form: { gap: Spacing.three },
+  row: { flexDirection: "row", gap: Spacing.two },
+  btn: { marginTop: Spacing.one },
+
+  errorBanner: {
+    fontSize: FontSize.sm,
+    color: Palette.error,
+    backgroundColor: Palette.errorLight,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.md,
+    textAlign: "center",
+    marginBottom: Spacing.two,
+  },
+
+  roleRow: {
+    flexDirection: "row",
+    gap: Spacing.three,
+    marginBottom: Spacing.four,
+  },
+  roleCard: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: Palette.border,
+    borderRadius: 20,
+    paddingVertical: Spacing.four,
+    paddingHorizontal: Spacing.two,
+    alignItems: "center",
+    gap: Spacing.two,
+    backgroundColor: Palette.white,
+  },
+  roleCardSelected: {
+    borderColor: Palette.link,
+    backgroundColor: "#EFF6FF",
+  },
+  roleIconWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    backgroundColor: "#F8FAFC",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  roleIconWrapSelected: {
+    backgroundColor: Palette.white,
+    shadowColor: Palette.link,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  roleLabel: {
+    fontSize: FontSize.md,
+    fontWeight: "700",
+    color: Palette.textSecondary,
+  },
+  roleLabelSelected: {
+    color: Palette.link,
+  },
+  roleDesc: {
+    fontSize: FontSize.xs,
+    color: Palette.textMuted,
+    textAlign: "center",
+    lineHeight: 16,
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: Palette.border,
+    marginVertical: Spacing.four,
+  },
+
+  toggleRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: Spacing.one,
+  },
+  toggleLabel: {
+    fontSize: FontSize.sm,
+    color: Palette.textSecondary,
+  },
+  toggleLink: {
+    fontSize: FontSize.sm,
+    fontWeight: "700",
+    color: Palette.link,
+  },
+});
