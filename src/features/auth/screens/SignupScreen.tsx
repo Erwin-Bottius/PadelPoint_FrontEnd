@@ -423,13 +423,13 @@ const styles = StyleSheet.create({
   },
   roleCardSelected: {
     borderColor: Palette.link,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: Palette.primaryLight,
   },
   roleIconWrap: {
     width: 60,
     height: 60,
     borderRadius: 18,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: Palette.surfaceMid,
     alignItems: "center",
     justifyContent: "center",
   },

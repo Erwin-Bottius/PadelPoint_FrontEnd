@@ -1,37 +1,59 @@
 import { client } from '@/lib/api';
 import type { ApiResponse } from '@/types/api';
 
-export type Class = {
+export type Teacher = {
   id: string;
-  title: string;
-  description: string | null;
-  teacherId: string;
-  level: number; // 1–10
-  maxPlayers: number;
-  scheduledAt: string;
-  durationMinutes: number;
-  location: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  level: number | null;
+  location: string | null;
+  club: string | null;
+  profilePicture: string | null;
   createdAt: string;
 };
 
-export type ClassWithEnrollment = Class & {
-  enrolledCount: number;
-  isEnrolled: boolean;
+export type ClassPlayer = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  level: number;
+  joinedAt: string;
+  email: string;
+};
+
+export type Class = {
+  id: string;
+  name: string;
+  scheduledAt: string;
+  duration: number;
+  location: string;
+  levelMin: number | null;
+  levelMax: number | null;
+  club: string;
+  maxPlayers: number;
+  isPublished: boolean;
+  isCancelled: boolean;
+  teacherId: string;
+  teacher: Teacher;
+  players: ClassPlayer[];
+  createdAt: string;
 };
 
 const classesService = {
-  getAll: async (): Promise<ClassWithEnrollment[]> => {
-    const { data } = await client.get<ApiResponse<ClassWithEnrollment[]>>('/classes');
+  getAll: async (params?: { startDate?: string; endDate?: string }): Promise<Class[]> => {
+    const { data } = await client.get<ApiResponse<Class[]>>('/classes', { params });
     return data.data;
   },
 
-  getById: async (id: string): Promise<ClassWithEnrollment> => {
-    const { data } = await client.get<ApiResponse<ClassWithEnrollment>>(`/classes/${id}`);
+  getById: async (id: string): Promise<Class> => {
+    const { data } = await client.get<ApiResponse<Class>>(`/classes/${id}`);
     return data.data;
   },
 
   create: async (payload: {
-    title: string;
+    name: string;
     description?: string;
     level: number;
     maxPlayers: number;

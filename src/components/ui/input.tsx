@@ -14,7 +14,7 @@ export function Input({ label, error, iconName, style, ...props }: InputProps) {
   const [focused, setFocused] = useState(false);
 
   const borderColor = error ? Palette.error : focused ? Palette.borderFocus : Palette.border;
-  const iconColor = focused ? Palette.borderFocus : Palette.textMuted;
+  const iconColor = focused ? Palette.primary : Palette.textMuted;
 
   return (
     <View style={styles.container}>
