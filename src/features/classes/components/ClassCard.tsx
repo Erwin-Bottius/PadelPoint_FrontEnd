@@ -1,3 +1,4 @@
+import { SymbolView } from "expo-symbols";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { FontSize, Palette, Radius, Spacing } from "@/constants/theme";
@@ -10,32 +11,49 @@ type Props = {
   onPress: () => void;
 };
 
-function getLevelLabel(levelMin: number | null, levelMax: number | null): string {
+function getLevelLabel(
+  levelMin: number | null,
+  levelMax: number | null,
+): string {
   if (!levelMin && !levelMax) return "Ouvert à tous";
   if (levelMin && levelMax) return `Niv. ${levelMin}–${levelMax}`;
   return `Niv. ${levelMin ?? levelMax}`;
 }
 
-function getLevelColors(levelMax: number | null): { bg: string; color: string } {
+function getLevelColors(levelMax: number | null): {
+  bg: string;
+  color: string;
+} {
   if (!levelMax) return { bg: Palette.successLight, color: Palette.success };
-  if (levelMax > 7) return { bg: Palette.levelEliteLight, color: Palette.levelElite };
-  if (levelMax > 5) return { bg: Palette.levelAdvancedLight, color: Palette.levelAdvanced };
-  if (levelMax > 3) return { bg: Palette.levelIntermediateLight, color: Palette.levelIntermediate };
+  if (levelMax > 7)
+    return { bg: Palette.levelEliteLight, color: Palette.levelElite };
+  if (levelMax > 5)
+    return { bg: Palette.levelAdvancedLight, color: Palette.levelAdvanced };
+  if (levelMax > 3)
+    return {
+      bg: Palette.levelIntermediateLight,
+      color: Palette.levelIntermediate,
+    };
   return { bg: Palette.levelBeginnerLight, color: Palette.levelBeginner };
 }
 
-function getSpotsLabel(spotsLeft: number): { label: string; bg: string; color: string } {
-  if (spotsLeft === 0) return { label: "Complet", bg: Palette.surfaceSubtle, color: Palette.textSecondary };
-  if (spotsLeft === 1) return { label: "1 place", bg: Palette.warningLight, color: Palette.warning };
-  return { label: `${spotsLeft} places`, bg: Palette.successLight, color: Palette.success };
+function getCountBadge(
+  enrolled: number,
+  max: number,
+): { bg: string; color: string } {
+  const spotsLeft = max - enrolled;
+  if (spotsLeft === 1)
+    return { bg: Palette.warningLight, color: Palette.warning };
+  if (spotsLeft <= 0)
+    return { bg: Palette.surfaceSubtle, color: Palette.textSecondary };
+  return { bg: Palette.successLight, color: Palette.success };
 }
 
 export function ClassCard({ item, userId, onPress }: Props) {
-  const spotsLeft = item.maxPlayers - item.players.length;
+  const enrolled = item.players.length;
   const isEnrolled = !!userId && item.players.some((p) => p.id === userId);
   const levelLabel = getLevelLabel(item.levelMin, item.levelMax);
-  const coachInitial = item.teacher?.firstName?.[0]?.toUpperCase() ?? "?";
-  const spotsBadge = getSpotsLabel(spotsLeft);
+  const countBadge = getCountBadge(enrolled, item.maxPlayers);
   const levelColors = getLevelColors(item.levelMax);
 
   return (
@@ -53,30 +71,42 @@ export function ClassCard({ item, userId, onPress }: Props) {
           <Text style={styles.title} numberOfLines={1}>
             {item.name}
           </Text>
-          <View style={[styles.badge, { backgroundColor: spotsBadge.bg }]}>
-            <Text style={[styles.badgeText, { color: spotsBadge.color }]}>
-              {spotsBadge.label}
+          <View style={[styles.badge, { backgroundColor: countBadge.bg }]}>
+            <Text style={[styles.badgeText, { color: countBadge.color }]}>
+              {enrolled}/{item.maxPlayers}
             </Text>
           </View>
         </View>
 
-        <View style={styles.coachRow}>
-          <View style={styles.coachAvatar}>
-            <Text style={styles.coachAvatarText}>{coachInitial}</Text>
+        <View style={styles.metaRow}>
+          <View style={styles.coachRow}>
+            {item.teacher ? (
+              <Text style={styles.coachName}>
+                Coach {item.teacher.firstName} {item.teacher.lastName}
+              </Text>
+            ) : null}
           </View>
-          {item.teacher ? (
-            <Text style={styles.coachName}>
-              Coach {item.teacher.firstName} {item.teacher.lastName}
+          <View style={styles.locationRow}>
+            <SymbolView
+              name={{
+                ios: "mappin",
+                android: "location_on",
+                web: "location_on",
+              }}
+              size={10}
+              tintColor={Palette.textMuted}
+            />
+            <Text style={styles.locationText} numberOfLines={1}>
+              {item.location}
             </Text>
-          ) : null}
+          </View>
         </View>
 
         <View style={styles.tagsRow}>
           <View style={[styles.levelTag, { backgroundColor: levelColors.bg }]}>
-            <Text style={[styles.levelTagText, { color: levelColors.color }]}>{levelLabel}</Text>
-          </View>
-          <View style={styles.levelTag}>
-            <Text style={styles.levelTagText}>{item.maxPlayers}P</Text>
+            <Text style={[styles.levelTagText, { color: levelColors.color }]}>
+              {levelLabel}
+            </Text>
           </View>
           {isEnrolled && (
             <View style={styles.enrolledBadge}>
@@ -108,14 +138,14 @@ const styles = StyleSheet.create({
   },
 
   timeCol: {
-    width: 56,
+    width: 64,
     alignItems: "center",
     justifyContent: "center",
     borderRightWidth: 1,
     borderRightColor: Palette.surfaceSubtle,
     paddingVertical: Spacing.three,
     marginVertical: Spacing.one,
-    gap: 2,
+    gap: 4,
   },
   time: {
     fontSize: FontSize.sm,
@@ -130,9 +160,24 @@ const styles = StyleSheet.create({
 
   content: {
     flex: 1,
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.two + 4,
-    gap: Spacing.two,
+    paddingVertical: Spacing.three + 2,
+    paddingHorizontal: Spacing.three,
+    gap: Spacing.two + 2,
+  },
+
+  metaRow: {
+    gap: Spacing.one + 2,
+  },
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  locationText: {
+    fontSize: FontSize.xs,
+    color: Palette.textMuted,
+    fontWeight: "500",
+    flex: 1,
   },
 
   topRow: {
