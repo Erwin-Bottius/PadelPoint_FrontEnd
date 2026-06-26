@@ -32,17 +32,24 @@ export function WeekStrip({
   const baseDate = addDays(new Date(), weekOffset * 7);
   const weekStart = getWeekStart(baseDate);
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const canGoPrev = weekOffset > 0;
 
   return (
     <View style={styles.container}>
       <View style={styles.weekHeader}>
-        <Pressable onPress={() => onChangeWeek(-1)} hitSlop={12}>
-          <SymbolView
-            name={{ ios: "arrow.left.circle.fill", android: "arrow_back", web: "arrow_back" }}
-            size={28}
-            tintColor={Palette.textPrimary}
-          />
-        </Pressable>
+        {canGoPrev ? (
+          <Pressable onPress={() => onChangeWeek(-1)} hitSlop={12}>
+            <SymbolView
+              name={{ ios: "arrow.left.circle.fill", android: "arrow_back", web: "arrow_back" }}
+              size={28}
+              tintColor={Palette.textPrimary}
+            />
+          </Pressable>
+        ) : (
+          <View style={{ width: 28 }} />
+        )}
 
         <Text style={styles.weekLabel}>{weekRangeLabel(weekStart)}</Text>
 
@@ -59,15 +66,18 @@ export function WeekStrip({
         {days.map((day) => {
           const key = dayKey(day);
           const today = isToday(day);
+          const isPast = !today && day < todayStart;
           const selected = selectedDay === key;
           const count = classCounts[key] ?? 0;
 
           return (
             <Pressable
               key={key}
-              onPress={() => onDayPress(key)}
+              onPress={!isPast ? () => onDayPress(key) : undefined}
+              disabled={isPast}
               style={[
                 styles.dayCell,
+                isPast && styles.dayCellPast,
                 today && styles.dayCellToday,
                 selected && styles.dayCellSelected,
               ]}
@@ -158,6 +168,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 3,
     elevation: 1,
+  },
+  dayCellPast: {
+    opacity: 0.35,
   },
   dayCellToday: {
     backgroundColor: Palette.primaryLight,

@@ -28,6 +28,7 @@ type SignUpData = {
   password: string;
   passwordConfirmation: string;
   role: UserRole;
+  level: number;
 };
 
 type AuthContextType = {

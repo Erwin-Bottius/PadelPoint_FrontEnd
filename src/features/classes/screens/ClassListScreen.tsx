@@ -13,9 +13,10 @@ import { AppHeader } from "@/components/ui/app-header";
 import { FontSize, Palette, Spacing } from "@/constants/theme";
 import { useAuth } from "@/context/auth";
 import { ClassCard } from "@/features/classes/components/ClassCard";
+import { ClassDetailModal } from "@/features/classes/components/ClassDetailModal";
 import { InfoCard } from "@/features/classes/components/InfoCard";
 import { WeekStrip } from "@/features/classes/components/WeekStrip";
-import classesService from "@/services/classes";
+import classesService, { type Class } from "@/services/classes";
 import playersService from "@/services/players";
 import {
   addDays,
@@ -23,8 +24,6 @@ import {
   getWeekStart,
   isSameDay,
 } from "@/utils/date";
-
-import type { Class } from "@/services/classes";
 
 type Section = {
   date: Date;
@@ -39,9 +38,13 @@ export default function ClassListScreen() {
   const { signOut } = useAuth();
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const weekStart = getWeekStart(addDays(new Date(), weekOffset * 7));
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const weekStart = getWeekStart(addDays(now, weekOffset * 7));
   const weekEnd = addDays(weekStart, 7);
-  const startDate = weekStart.toISOString().slice(0, 10);
+  const weekStartStr = weekStart.toISOString().slice(0, 10);
+  const startDate = weekOffset === 0 ? todayStr : weekStartStr;
   const endDate = weekEnd.toISOString().slice(0, 10);
 
   const { data: profile } = useQuery({
@@ -59,10 +62,14 @@ export default function ClassListScreen() {
   });
 
   const userId = profile?.id;
+  const selectedClass = selectedClassId
+    ? (classes.find((c) => c.id === selectedClassId) ?? null)
+    : null;
 
   const sections: Section[] = Array.from({ length: 7 }, (_, i) => {
     const day = addDays(weekStart, i);
     const dayClasses = classes
+      .filter((c) => new Date(c.scheduledAt) > now)
       .filter((c) => {
         const isFull = c.players.length >= c.maxPlayers;
         const isEnrolled = !!userId && c.players.some((p) => p.id === userId);
@@ -101,7 +108,10 @@ export default function ClassListScreen() {
           <>
             <InfoCard
               firstName={profile?.firstName}
-              weekClassCount={sections.reduce((acc, s) => acc + s.data.length, 0)}
+              weekClassCount={sections.reduce(
+                (acc, s) => acc + s.data.length,
+                0,
+              )}
               isLoading={isLoading}
             />
             <WeekStrip
@@ -112,7 +122,9 @@ export default function ClassListScreen() {
               }}
               classCounts={classCounts}
               selectedDay={selectedDay}
-              onDayPress={(key) => setSelectedDay((prev) => prev === key ? null : key)}
+              onDayPress={(key) =>
+                setSelectedDay((prev) => (prev === key ? null : key))
+              }
             />
           </>
         }
@@ -121,7 +133,13 @@ export default function ClassListScreen() {
             {formatShortDate(section.date)}
           </Text>
         )}
-        renderItem={({ item }) => <ClassCard item={item} userId={userId} onPress={() => {}} />}
+        renderItem={({ item }) => (
+          <ClassCard
+            item={item}
+            userId={userId}
+            onPress={() => setSelectedClassId(item.id)}
+          />
+        )}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         SectionSeparatorComponent={() => (
           <View style={styles.sectionSeparator} />
@@ -140,14 +158,25 @@ export default function ClassListScreen() {
           ) : (
             <View style={styles.center}>
               <Text style={styles.emptyTitle}>
-                {selectedDay ? "Aucun cours ce jour" : "Aucun cours cette semaine"}
+                {selectedDay
+                  ? "Aucun cours ce jour"
+                  : "Aucun cours cette semaine"}
               </Text>
               <Text style={styles.emptySubtitle}>
-                {selectedDay ? "Sélectionnez un autre jour." : "Essayez la semaine suivante."}
+                {selectedDay
+                  ? "Sélectionnez un autre jour."
+                  : "Essayez la semaine suivante."}
               </Text>
             </View>
           )
         }
+      />
+
+      <ClassDetailModal
+        item={selectedClass}
+        visible={!!selectedClass}
+        profile={profile ?? null}
+        onClose={() => setSelectedClassId(null)}
       />
     </View>
   );

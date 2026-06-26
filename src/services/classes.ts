@@ -65,12 +65,14 @@ const classesService = {
     return data.data;
   },
 
-  join: async (id: string): Promise<void> => {
-    await client.post(`/classes/${id}/enroll`);
+  join: async (id: string): Promise<Class> => {
+    const { data } = await client.post<ApiResponse<Class>>(`/classes/${id}/join`);
+    return data.data;
   },
 
-  leave: async (id: string): Promise<void> => {
-    await client.delete(`/classes/${id}/enroll`);
+  leave: async (id: string): Promise<Class> => {
+    const { data } = await client.delete<ApiResponse<Class>>(`/classes/${id}/join`);
+    return data.data;
   },
 };
 

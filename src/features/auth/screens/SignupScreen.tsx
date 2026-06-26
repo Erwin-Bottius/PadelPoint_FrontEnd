@@ -19,7 +19,7 @@ import { FontSize, Palette, Radius, Spacing } from "@/constants/theme";
 import { useAuth, type UserRole } from "@/context/auth";
 import { ApiError } from "@/lib/api";
 
-type Step = 0 | 1;
+type Step = 0 | 1 | 2;
 
 type Fields = {
   firstName: string;
@@ -30,6 +30,24 @@ type Fields = {
 };
 
 type FieldErrors = Partial<Fields>;
+
+const LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+
+function getLevelCategory(level: number): string {
+  if (level >= 9) return "Elite";
+  if (level >= 7) return "Expert";
+  if (level >= 5) return "Avancé";
+  if (level >= 3) return "Intermédiaire";
+  return "Débutant";
+}
+
+function getLevelCategoryColor(level: number): string {
+  if (level >= 9) return Palette.levelElite;
+  if (level >= 7) return Palette.levelExpert;
+  if (level >= 5) return Palette.levelAdvanced;
+  if (level >= 3) return Palette.levelIntermediate;
+  return Palette.levelBeginner;
+}
 
 export default function SignupScreen() {
   const { signUp } = useAuth();
@@ -45,6 +63,7 @@ export default function SignupScreen() {
   });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [role, setRole] = useState<UserRole | null>(null);
+  const [level, setLevel] = useState<number | null>(null);
 
   function set(key: keyof Fields) {
     return (value: string) => {
@@ -69,7 +88,7 @@ export default function SignupScreen() {
   }
 
   const { mutate: submit, isPending, error } = useMutation({
-    mutationFn: () => signUp({ ...fields, role: role! }),
+    mutationFn: () => signUp({ ...fields, role: role!, level: level! }),
     onError: (e) => {
       if (e instanceof ApiError && e.errors?.length) {
         const fErrors: FieldErrors = {};
@@ -86,15 +105,26 @@ export default function SignupScreen() {
 
   const errorMessage = error instanceof ApiError
     ? (error.errors?.length ? null : error.message)
-    : error ? 'Une erreur est survenue.' : null;
+    : error ? "Une erreur est survenue." : null;
 
   function handleContinue() {
     if (validateStep0()) setStep(1);
   }
 
-  function handleSubmit() {
+  function handleContinueRole() {
     if (!role) return;
+    setStep(2);
+  }
+
+  function handleSubmit() {
+    if (!level) return;
     submit();
+  }
+
+  function handleBack() {
+    if (step === 2) setStep(1);
+    else if (step === 1) setStep(0);
+    else router.back();
   }
 
   return (
@@ -111,10 +141,7 @@ export default function SignupScreen() {
           >
             <View style={styles.card}>
               <View style={styles.header}>
-                <Pressable
-                  onPress={() => (step === 1 ? setStep(0) : router.back())}
-                  style={styles.backBtn}
-                >
+                <Pressable onPress={handleBack} style={styles.backBtn}>
                   <SymbolView
                     name={{
                       ios: "chevron.left",
@@ -129,13 +156,12 @@ export default function SignupScreen() {
 
                 <View style={styles.steps}>
                   <View style={[styles.step, styles.stepActive]} />
-                  <View
-                    style={[styles.step, step === 1 && styles.stepActive]}
-                  />
+                  <View style={[styles.step, step >= 1 && styles.stepActive]} />
+                  <View style={[styles.step, step === 2 && styles.stepActive]} />
                 </View>
               </View>
 
-              {step === 0 ? (
+              {step === 0 && (
                 <>
                   <Text style={styles.title}>Créer un compte</Text>
                   <Text style={styles.subtitle}>
@@ -170,11 +196,7 @@ export default function SignupScreen() {
 
                     <Input
                       label="Email"
-                      iconName={{
-                        ios: "envelope",
-                        android: "email",
-                        web: "mail",
-                      }}
+                      iconName={{ ios: "envelope", android: "email", web: "mail" }}
                       value={fields.email}
                       onChangeText={set("email")}
                       keyboardType="email-address"
@@ -185,11 +207,7 @@ export default function SignupScreen() {
                     />
                     <Input
                       label="Mot de passe"
-                      iconName={{
-                        ios: "lock.fill",
-                        android: "lock",
-                        web: "lock",
-                      }}
+                      iconName={{ ios: "lock.fill", android: "lock", web: "lock" }}
                       value={fields.password}
                       onChangeText={set("password")}
                       secureTextEntry
@@ -199,11 +217,7 @@ export default function SignupScreen() {
                     />
                     <Input
                       label="Confirmer le mot de passe"
-                      iconName={{
-                        ios: "lock.fill",
-                        android: "lock",
-                        web: "lock",
-                      }}
+                      iconName={{ ios: "lock.fill", android: "lock", web: "lock" }}
                       value={fields.passwordConfirmation}
                       onChangeText={set("passwordConfirmation")}
                       secureTextEntry
@@ -217,7 +231,9 @@ export default function SignupScreen() {
                     </Button>
                   </View>
                 </>
-              ) : (
+              )}
+
+              {step === 1 && (
                 <>
                   <Text style={styles.title}>Votre rôle ?</Text>
                   <Text style={styles.subtitle}>
@@ -249,6 +265,57 @@ export default function SignupScreen() {
                     />
                   </View>
 
+                  <Button
+                    onPress={handleContinueRole}
+                    variant="primary"
+                    disabled={!role}
+                    style={styles.btn}
+                  >
+                    Continuer
+                  </Button>
+                </>
+              )}
+
+              {step === 2 && (
+                <>
+                  <Text style={styles.title}>Votre niveau ?</Text>
+                  <Text style={styles.subtitle}>
+                    Sélectionnez votre niveau de padel de 1 (débutant) à 10 (élite)
+                  </Text>
+
+                  <View style={styles.levelGrid}>
+                    {LEVELS.map((n) => (
+                      <Pressable
+                        key={n}
+                        onPress={() => setLevel(n)}
+                        style={[
+                          styles.levelCell,
+                          level === n && {
+                            backgroundColor: getLevelCategoryColor(n),
+                            borderColor: getLevelCategoryColor(n),
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.levelCellNumber,
+                            level === n && styles.levelCellNumberSelected,
+                          ]}
+                        >
+                          {n}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+
+                  {level !== null && (
+                    <View style={[styles.levelCategoryBadge, { borderColor: getLevelCategoryColor(level) }]}>
+                      <Text style={[styles.levelCategoryText, { color: getLevelCategoryColor(level) }]}>
+                        {getLevelCategory(level)}
+                      </Text>
+                    </View>
+                  )}
+
                   {errorMessage ? (
                     <Text style={styles.errorBanner}>{errorMessage}</Text>
                   ) : null}
@@ -257,7 +324,7 @@ export default function SignupScreen() {
                     onPress={handleSubmit}
                     variant="primary"
                     loading={isPending}
-                    disabled={!role}
+                    disabled={!level}
                     style={styles.btn}
                   >
                     Créer mon compte
@@ -289,21 +356,13 @@ type RoleCardProps = {
   onPress: () => void;
 };
 
-function RoleCard({
-  label,
-  description,
-  iconName,
-  selected,
-  onPress,
-}: RoleCardProps) {
+function RoleCard({ label, description, iconName, selected, onPress }: RoleCardProps) {
   return (
     <Pressable
       onPress={onPress}
       style={[styles.roleCard, selected && styles.roleCardSelected]}
     >
-      <View
-        style={[styles.roleIconWrap, selected && styles.roleIconWrapSelected]}
-      >
+      <View style={[styles.roleIconWrap, selected && styles.roleIconWrapSelected]}>
         <SymbolView
           name={iconName}
           size={30}
@@ -454,6 +513,43 @@ const styles = StyleSheet.create({
     color: Palette.textMuted,
     textAlign: "center",
     lineHeight: 16,
+  },
+
+  levelGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.two,
+    marginBottom: Spacing.three,
+  },
+  levelCell: {
+    width: "17%",
+    aspectRatio: 1,
+    borderRadius: Radius.md,
+    borderWidth: 1.5,
+    borderColor: Palette.border,
+    backgroundColor: Palette.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  levelCellNumber: {
+    fontSize: FontSize.lg,
+    fontWeight: "800",
+    color: Palette.textSecondary,
+  },
+  levelCellNumberSelected: {
+    color: Palette.white,
+  },
+  levelCategoryBadge: {
+    alignSelf: "center",
+    borderWidth: 1.5,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+    marginBottom: Spacing.three,
+  },
+  levelCategoryText: {
+    fontSize: FontSize.sm,
+    fontWeight: "700",
   },
 
   divider: {

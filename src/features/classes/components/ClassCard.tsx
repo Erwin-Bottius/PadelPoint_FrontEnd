@@ -76,6 +76,9 @@ export function ClassCard({ item, userId, onPress }: Props) {
           <View style={[styles.levelTag, { backgroundColor: levelColors.bg }]}>
             <Text style={[styles.levelTagText, { color: levelColors.color }]}>{levelLabel}</Text>
           </View>
+          <View style={styles.levelTag}>
+            <Text style={styles.levelTagText}>{item.maxPlayers}P</Text>
+          </View>
           {isEnrolled && (
             <View style={styles.enrolledBadge}>
               <Text style={styles.enrolledBadgeText}>Inscrit</Text>
