@@ -34,18 +34,16 @@ type FieldErrors = Partial<Fields>;
 const LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
 function getLevelCategory(level: number): string {
-  if (level >= 9) return "Elite";
-  if (level >= 7) return "Expert";
-  if (level >= 5) return "Avancé";
-  if (level >= 3) return "Intermédiaire";
+  if (level > 7) return "Elite";
+  if (level > 5) return "Avancé";
+  if (level > 3) return "Intermédiaire";
   return "Débutant";
 }
 
 function getLevelCategoryColor(level: number): string {
-  if (level >= 9) return Palette.levelElite;
-  if (level >= 7) return Palette.levelExpert;
-  if (level >= 5) return Palette.levelAdvanced;
-  if (level >= 3) return Palette.levelIntermediate;
+  if (level > 7) return Palette.levelElite;
+  if (level > 5) return Palette.levelAdvanced;
+  if (level > 3) return Palette.levelIntermediate;
   return Palette.levelBeginner;
 }
 
@@ -54,6 +52,7 @@ export default function SignupScreen() {
   const router = useRouter();
 
   const [step, setStep] = useState<Step>(0);
+
   const [fields, setFields] = useState<Fields>({
     firstName: "",
     lastName: "",
@@ -87,7 +86,11 @@ export default function SignupScreen() {
     return Object.keys(errors).length === 0;
   }
 
-  const { mutate: submit, isPending, error } = useMutation({
+  const {
+    mutate: submit,
+    isPending,
+    error,
+  } = useMutation({
     mutationFn: () => signUp({ ...fields, role: role!, level: level! }),
     onError: (e) => {
       if (e instanceof ApiError && e.errors?.length) {
@@ -103,9 +106,14 @@ export default function SignupScreen() {
     },
   });
 
-  const errorMessage = error instanceof ApiError
-    ? (error.errors?.length ? null : error.message)
-    : error ? "Une erreur est survenue." : null;
+  const errorMessage =
+    error instanceof ApiError
+      ? error.errors?.length
+        ? null
+        : error.message
+      : error
+        ? "Une erreur est survenue."
+        : null;
 
   function handleContinue() {
     if (validateStep0()) setStep(1);
@@ -157,7 +165,9 @@ export default function SignupScreen() {
                 <View style={styles.steps}>
                   <View style={[styles.step, styles.stepActive]} />
                   <View style={[styles.step, step >= 1 && styles.stepActive]} />
-                  <View style={[styles.step, step === 2 && styles.stepActive]} />
+                  <View
+                    style={[styles.step, step === 2 && styles.stepActive]}
+                  />
                 </View>
               </View>
 
@@ -196,7 +206,11 @@ export default function SignupScreen() {
 
                     <Input
                       label="Email"
-                      iconName={{ ios: "envelope", android: "email", web: "mail" }}
+                      iconName={{
+                        ios: "envelope",
+                        android: "email",
+                        web: "mail",
+                      }}
                       value={fields.email}
                       onChangeText={set("email")}
                       keyboardType="email-address"
@@ -207,7 +221,11 @@ export default function SignupScreen() {
                     />
                     <Input
                       label="Mot de passe"
-                      iconName={{ ios: "lock.fill", android: "lock", web: "lock" }}
+                      iconName={{
+                        ios: "lock.fill",
+                        android: "lock",
+                        web: "lock",
+                      }}
                       value={fields.password}
                       onChangeText={set("password")}
                       secureTextEntry
@@ -217,7 +235,11 @@ export default function SignupScreen() {
                     />
                     <Input
                       label="Confirmer le mot de passe"
-                      iconName={{ ios: "lock.fill", android: "lock", web: "lock" }}
+                      iconName={{
+                        ios: "lock.fill",
+                        android: "lock",
+                        web: "lock",
+                      }}
                       value={fields.passwordConfirmation}
                       onChangeText={set("passwordConfirmation")}
                       secureTextEntry
@@ -280,7 +302,8 @@ export default function SignupScreen() {
                 <>
                   <Text style={styles.title}>Votre niveau ?</Text>
                   <Text style={styles.subtitle}>
-                    Sélectionnez votre niveau de padel de 1 (débutant) à 10 (élite)
+                    Sélectionnez votre niveau de padel de 1 (débutant) à 10
+                    (élite)
                   </Text>
 
                   <View style={styles.levelGrid}>
@@ -308,13 +331,32 @@ export default function SignupScreen() {
                     ))}
                   </View>
 
-                  {level !== null && (
-                    <View style={[styles.levelCategoryBadge, { borderColor: getLevelCategoryColor(level) }]}>
-                      <Text style={[styles.levelCategoryText, { color: getLevelCategoryColor(level) }]}>
-                        {getLevelCategory(level)}
-                      </Text>
-                    </View>
-                  )}
+                  <View
+                    style={[
+                      styles.levelCategoryBadge,
+                      {
+                        borderColor:
+                          level !== null
+                            ? getLevelCategoryColor(level)
+                            : "transparent",
+                      },
+                      level === null && { opacity: 0 },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.levelCategoryText,
+                        {
+                          color:
+                            level !== null
+                              ? getLevelCategoryColor(level)
+                              : "transparent",
+                        },
+                      ]}
+                    >
+                      {level !== null ? getLevelCategory(level) : "Placeholder"}
+                    </Text>
+                  </View>
 
                   {errorMessage ? (
                     <Text style={styles.errorBanner}>{errorMessage}</Text>
@@ -356,13 +398,21 @@ type RoleCardProps = {
   onPress: () => void;
 };
 
-function RoleCard({ label, description, iconName, selected, onPress }: RoleCardProps) {
+function RoleCard({
+  label,
+  description,
+  iconName,
+  selected,
+  onPress,
+}: RoleCardProps) {
   return (
     <Pressable
       onPress={onPress}
       style={[styles.roleCard, selected && styles.roleCardSelected]}
     >
-      <View style={[styles.roleIconWrap, selected && styles.roleIconWrapSelected]}>
+      <View
+        style={[styles.roleIconWrap, selected && styles.roleIconWrapSelected]}
+      >
         <SymbolView
           name={iconName}
           size={30}
@@ -474,9 +524,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Palette.border,
     borderRadius: 20,
-    paddingVertical: Spacing.four,
-    paddingHorizontal: Spacing.two,
     alignItems: "center",
+    justifyContent: "center",
     gap: Spacing.two,
     backgroundColor: Palette.white,
   },
@@ -522,14 +571,15 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.three,
   },
   levelCell: {
+    display: "flex",
     width: "17%",
-    aspectRatio: 1,
     borderRadius: Radius.md,
     borderWidth: 1.5,
     borderColor: Palette.border,
     backgroundColor: Palette.surface,
     alignItems: "center",
     justifyContent: "center",
+    padding: Spacing.two,
   },
   levelCellNumber: {
     fontSize: FontSize.lg,

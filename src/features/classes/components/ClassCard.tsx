@@ -18,10 +18,9 @@ function getLevelLabel(levelMin: number | null, levelMax: number | null): string
 
 function getLevelColors(levelMax: number | null): { bg: string; color: string } {
   if (!levelMax) return { bg: Palette.successLight, color: Palette.success };
-  if (levelMax >= 9) return { bg: Palette.levelEliteLight, color: Palette.levelElite };
-  if (levelMax >= 7) return { bg: Palette.levelExpertLight, color: Palette.levelExpert };
-  if (levelMax >= 5) return { bg: Palette.levelAdvancedLight, color: Palette.levelAdvanced };
-  if (levelMax >= 3) return { bg: Palette.levelIntermediateLight, color: Palette.levelIntermediate };
+  if (levelMax > 7) return { bg: Palette.levelEliteLight, color: Palette.levelElite };
+  if (levelMax > 5) return { bg: Palette.levelAdvancedLight, color: Palette.levelAdvanced };
+  if (levelMax > 3) return { bg: Palette.levelIntermediateLight, color: Palette.levelIntermediate };
   return { bg: Palette.levelBeginnerLight, color: Palette.levelBeginner };
 }
 
