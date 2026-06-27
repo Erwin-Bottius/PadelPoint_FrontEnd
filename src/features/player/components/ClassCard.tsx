@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { FontSize, Palette, Radius, Spacing } from "@/constants/theme";
 import { type Class } from "@/services/classes";
 import { formatTime } from "@/utils/date";
+import { getLevelColors, getLevelLabel } from "@/utils/level";
 
 type Props = {
   item: Class;
@@ -11,31 +12,6 @@ type Props = {
   onPress: () => void;
 };
 
-function getLevelLabel(
-  levelMin: number | null,
-  levelMax: number | null,
-): string {
-  if (!levelMin && !levelMax) return "Ouvert à tous";
-  if (levelMin && levelMax) return `Niv. ${levelMin}–${levelMax}`;
-  return `Niv. ${levelMin ?? levelMax}`;
-}
-
-function getLevelColors(levelMax: number | null): {
-  bg: string;
-  color: string;
-} {
-  if (!levelMax) return { bg: Palette.successLight, color: Palette.success };
-  if (levelMax > 7)
-    return { bg: Palette.levelEliteLight, color: Palette.levelElite };
-  if (levelMax > 5)
-    return { bg: Palette.levelAdvancedLight, color: Palette.levelAdvanced };
-  if (levelMax > 3)
-    return {
-      bg: Palette.levelIntermediateLight,
-      color: Palette.levelIntermediate,
-    };
-  return { bg: Palette.levelBeginnerLight, color: Palette.levelBeginner };
-}
 
 function getCountBadge(
   enrolled: number,
@@ -61,31 +37,28 @@ export function ClassCard({ item, userId, onPress }: Props) {
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
     >
-      <View style={styles.timeCol}>
-        <Text style={styles.time}>{formatTime(item.scheduledAt)}</Text>
-        <Text style={styles.duration}>{item.duration}m</Text>
-      </View>
-
-      <View style={styles.content}>
-        <View style={styles.topRow}>
-          <Text style={styles.title} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <View style={[styles.badge, { backgroundColor: countBadge.bg }]}>
-            <Text style={[styles.badgeText, { color: countBadge.color }]}>
-              {enrolled}/{item.maxPlayers}
-            </Text>
-          </View>
+      {/* Top section: heure + nom + localisation */}
+      <View style={styles.topSection}>
+        <View style={styles.timeCol}>
+          <Text style={styles.time}>{formatTime(item.scheduledAt)}</Text>
         </View>
 
-        <View style={styles.metaRow}>
-          <View style={styles.coachRow}>
-            {item.teacher ? (
-              <Text style={styles.coachName}>
-                Coach {item.teacher.firstName} {item.teacher.lastName}
+        <View style={styles.content}>
+          <View style={styles.titleRow}>
+            <Text style={styles.title} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <View
+              style={[styles.countBadge, { backgroundColor: countBadge.bg }]}
+            >
+              <Text
+                style={[styles.countBadgeText, { color: countBadge.color }]}
+              >
+                {enrolled}/{item.maxPlayers}
               </Text>
-            ) : null}
+            </View>
           </View>
+
           <View style={styles.locationRow}>
             <SymbolView
               name={{
@@ -101,16 +74,39 @@ export function ClassCard({ item, userId, onPress }: Props) {
             </Text>
           </View>
         </View>
+      </View>
 
-        <View style={styles.tagsRow}>
-          <View style={[styles.levelTag, { backgroundColor: levelColors.bg }]}>
-            <Text style={[styles.levelTagText, { color: levelColors.color }]}>
-              {levelLabel}
-            </Text>
+      {/* Footer: gauche | centre | droite */}
+      <View style={styles.footer}>
+        <View style={styles.footerLeft}>
+          <View style={styles.footerChip}>
+            <Text style={styles.footerChipText}>{item.duration} min</Text>
           </View>
+        </View>
+
+        <View style={[styles.levelChip, { backgroundColor: levelColors.bg }]}>
+          <Text style={[styles.levelChipText, { color: levelColors.color }]}>
+            {levelLabel}
+          </Text>
+        </View>
+
+        <View style={styles.footerRight}>
+          {item.teacher ? (
+            <>
+              <View style={styles.coachAvatar}>
+                <Text style={styles.coachAvatarText}>
+                  {(item.teacher.firstName[0] ?? "").toUpperCase()}
+                  {(item.teacher.lastName[0] ?? "").toUpperCase()}
+                </Text>
+              </View>
+              <Text style={styles.coachText} numberOfLines={1}>
+                {item.teacher.firstName}
+              </Text>
+            </>
+          ) : null}
           {isEnrolled && (
             <View style={styles.enrolledBadge}>
-              <Text style={styles.enrolledBadgeText}>Inscrit</Text>
+              <Text style={styles.enrolledText}>Inscrit</Text>
             </View>
           )}
         </View>
@@ -125,18 +121,21 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Palette.surfaceSubtle,
-    flexDirection: "row",
     overflow: "hidden",
     shadowColor: Palette.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 1,
+    paddingVertical: Spacing.two,
   },
   cardPressed: {
     transform: [{ scale: 0.98 }],
   },
 
+  topSection: {
+    flexDirection: "row",
+  },
   timeCol: {
     width: 64,
     alignItems: "center",
@@ -144,29 +143,40 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: Palette.surfaceSubtle,
     paddingVertical: Spacing.three,
-    marginVertical: Spacing.one,
-    gap: 4,
   },
   time: {
     fontSize: FontSize.sm,
     fontWeight: "700",
     color: Palette.textPrimary,
   },
-  duration: {
-    fontSize: 10,
-    color: Palette.textMuted,
-    fontWeight: "500",
-  },
 
   content: {
     flex: 1,
-    paddingVertical: Spacing.three + 2,
+    paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.three,
-    gap: Spacing.two + 2,
-  },
-
-  metaRow: {
     gap: Spacing.one + 2,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: Spacing.two,
+  },
+  title: {
+    flex: 1,
+    fontSize: FontSize.md,
+    fontWeight: "700",
+    color: Palette.textPrimary,
+  },
+  countBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Radius.full,
+    flexShrink: 0,
+  },
+  countBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
   },
   locationRow: {
     flexDirection: "row",
@@ -180,83 +190,77 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  topRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: Spacing.two,
-  },
-  title: {
-    flex: 1,
-    fontSize: FontSize.md,
-    fontWeight: "700",
-    color: Palette.textPrimary,
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.full,
-    flexShrink: 0,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-  },
-
-  coachRow: {
+  footer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Spacing.one + 2,
+    borderTopWidth: 1,
+    borderTopColor: Palette.surfaceSubtle,
+    backgroundColor: Palette.surface,
+    paddingHorizontal: Spacing.two + 2,
+    paddingVertical: Spacing.one + 2,
+  },
+  footerLeft: {
+    flex: 1,
+    alignItems: "flex-start",
+  },
+  footerRight: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: Spacing.one,
+  },
+  footerChip: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: Radius.full,
+    backgroundColor: Palette.surfaceSubtle,
+  },
+  footerChipText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: Palette.textSecondary,
+  },
+  levelChip: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: Radius.full,
+  },
+  levelChipText: {
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
   },
   coachAvatar: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: Palette.avatarBg,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: Palette.white,
+    flexShrink: 0,
   },
   coachAvatarText: {
-    fontSize: 9,
+    fontSize: 7,
     fontWeight: "800",
     color: Palette.textSecondary,
   },
-  coachName: {
+  coachText: {
     fontSize: FontSize.xs,
     color: Palette.textSecondary,
     fontWeight: "500",
-  },
-
-  tagsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: Spacing.one,
-  },
-  levelTag: {
-    backgroundColor: Palette.surfaceSubtle,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  levelTagText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: Palette.textPrimary,
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
+    flexShrink: 1,
   },
   enrolledBadge: {
-    backgroundColor: Palette.surfaceSubtle,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: Radius.full,
+    backgroundColor: Palette.primaryLight,
   },
-  enrolledBadgeText: {
+  enrolledText: {
     fontSize: 10,
     fontWeight: "700",
-    color: Palette.textPrimary,
+    color: Palette.primary,
   },
 });

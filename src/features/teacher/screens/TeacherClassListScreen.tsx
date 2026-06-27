@@ -12,10 +12,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppHeader } from "@/components/ui/app-header";
 import { FontSize, Palette, Spacing } from "@/constants/theme";
 import { useAuth } from "@/context/auth";
-import { ClassCard } from "@/features/classes/components/ClassCard";
-import { ClassDetailModal } from "@/features/classes/components/ClassDetailModal";
-import { InfoCard } from "@/features/classes/components/InfoCard";
-import { WeekStrip } from "@/features/classes/components/WeekStrip";
+import { TeacherClassCard } from "@/features/teacher/components/TeacherClassCard";
+import { TeacherDetailModal } from "@/features/teacher/components/TeacherDetailModal";
+import { TeacherInfoCard } from "@/features/teacher/components/TeacherInfoCard";
+import { WeekStrip } from "@/features/common/components/WeekStrip";
 import classesService, { type Class } from "@/services/classes";
 import playersService from "@/services/players";
 import {
@@ -34,7 +34,7 @@ function dayKey(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-export default function ClassListScreen() {
+export default function TeacherClassListScreen() {
   const { signOut } = useAuth();
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
@@ -61,7 +61,6 @@ export default function ClassListScreen() {
     queryFn: () => classesService.getAll({ startDate, endDate }),
   });
 
-  const userId = profile?.id;
   const selectedClass = selectedClassId
     ? (classes.find((c) => c.id === selectedClassId) ?? null)
     : null;
@@ -70,11 +69,6 @@ export default function ClassListScreen() {
     const day = addDays(weekStart, i);
     const dayClasses = classes
       .filter((c) => new Date(c.scheduledAt) > now)
-      .filter((c) => {
-        const isFull = c.players.length >= c.maxPlayers;
-        const isEnrolled = !!userId && c.players.some((p) => p.id === userId);
-        return !isFull || isEnrolled;
-      })
       .filter((c) => isSameDay(new Date(c.scheduledAt), day))
       .sort(
         (a, b) =>
@@ -106,7 +100,7 @@ export default function ClassListScreen() {
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <>
-            <InfoCard
+            <TeacherInfoCard
               firstName={profile?.firstName}
               weekClassCount={sections.reduce(
                 (acc, s) => acc + s.data.length,
@@ -134,9 +128,8 @@ export default function ClassListScreen() {
           </Text>
         )}
         renderItem={({ item }) => (
-          <ClassCard
+          <TeacherClassCard
             item={item}
-            userId={userId}
             onPress={() => setSelectedClassId(item.id)}
           />
         )}
@@ -172,10 +165,9 @@ export default function ClassListScreen() {
         }
       />
 
-      <ClassDetailModal
+      <TeacherDetailModal
         item={selectedClass}
         visible={!!selectedClass}
-        profile={profile ?? null}
         onClose={() => setSelectedClassId(null)}
       />
     </View>

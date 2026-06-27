@@ -1,8 +1,5 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { SymbolView } from "expo-symbols";
-import { useState } from "react";
 import {
-  ActivityIndicator,
   Dimensions,
   Modal,
   Pressable,
@@ -14,71 +11,29 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { FontSize, Palette, Radius, Spacing } from "@/constants/theme";
-import type { User } from "@/context/auth";
-import classesService, { type Class } from "@/services/classes";
+import { type Class } from "@/services/classes";
 import { formatTime } from "@/utils/date";
+import { getLevelLabel } from "@/utils/level";
+import { getInitials } from "@/utils/user";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 
 type Props = {
   item: Class | null;
   visible: boolean;
-  profile: User | null;
   onClose: () => void;
 };
 
-function getLevelLabel(
-  levelMin: number | null,
-  levelMax: number | null,
-): string {
-  if (!levelMin && !levelMax) return "Ouvert à tous";
-  if (levelMin && levelMax) return `Niv. ${levelMin}–${levelMax}`;
-  return `Niv. ${levelMin ?? levelMax}`;
-}
 
-function getInitials(firstName: string, lastName: string): string {
-  return `${firstName[0] ?? ""}${lastName[0] ?? ""}`.toUpperCase();
-}
 
-export function ClassDetailModal({ item, visible, profile, onClose }: Props) {
-  const queryClient = useQueryClient();
-  const [joiningSlotKey, setJoiningSlotKey] = useState<string | null>(null);
-
-  function updateCache(updated: Class) {
-    queryClient.setQueriesData<Class[]>(
-      { queryKey: ["classes"], exact: false },
-      (old) => old?.map((c) => (c.id === updated.id ? updated : c)),
-    );
-  }
-
-  const { mutate: join, isPending: isJoining } = useMutation({
-    mutationFn: () => classesService.join(item!.id),
-    onSuccess: updateCache,
-    onSettled: () => setJoiningSlotKey(null),
-  });
-
-  const { mutate: leave, isPending: isLeaving } = useMutation({
-    mutationFn: () => classesService.leave(item!.id),
-    onSuccess: updateCache,
-  });
-
+export function TeacherDetailModal({ item, visible, onClose }: Props) {
   if (!item) return null;
-
-  const isEnrolled = !!profile && item.players.some((p) => p.id === profile.id);
-
-  const levelOk =
-    (!item.levelMin && !item.levelMax) ||
-    (profile?.level != null &&
-      (item.levelMin == null || profile.level >= item.levelMin) &&
-      (item.levelMax == null || profile.level <= item.levelMax));
-  const showLevelWarning = !isEnrolled && !levelOk;
 
   const slots = Array.from(
     { length: item.maxPlayers },
     (_, i) => item.players[i] ?? null,
   );
 
-  // Group into rows of 2
   const rows: (typeof slots)[number][][] = [];
   for (let i = 0; i < slots.length; i += 2) {
     rows.push([slots[i], slots[i + 1] ?? null]);
@@ -97,7 +52,6 @@ export function ClassDetailModal({ item, visible, profile, onClose }: Props) {
 
         <View style={styles.sheet}>
           <SafeAreaView edges={["bottom"]}>
-            {/* Handle */}
             <View style={styles.handleWrapper}>
               <View style={styles.handle} />
             </View>
@@ -106,7 +60,6 @@ export function ClassDetailModal({ item, visible, profile, onClose }: Props) {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
             >
-              {/* Header */}
               <View style={styles.header}>
                 <Text style={styles.className}>{item.name}</Text>
                 <Pressable onPress={onClose} hitSlop={12}>
@@ -122,7 +75,6 @@ export function ClassDetailModal({ item, visible, profile, onClose }: Props) {
                 </Pressable>
               </View>
 
-              {/* Meta info */}
               <View style={styles.metaRow}>
                 <InfoChip
                   icon={{ ios: "clock", android: "schedule", web: "schedule" }}
@@ -140,54 +92,22 @@ export function ClassDetailModal({ item, visible, profile, onClose }: Props) {
               <View style={styles.metaRow}>
                 <InfoChip
                   icon={{
-                    ios: "person.fill",
-                    android: "person",
-                    web: "person",
-                  }}
-                  label={`Coach ${item.teacher.firstName} ${item.teacher.lastName}`}
-                />
-                <InfoChip
-                  icon={{
                     ios: "sportscourt",
                     android: "sports_tennis",
                     web: "sports",
                   }}
                   label={getLevelLabel(item.levelMin, item.levelMax)}
                 />
-              </View>
-              <View style={styles.metaRow}>
                 <InfoChip
                   icon={{
                     ios: "person.2.fill",
                     android: "group",
                     web: "group",
                   }}
-                  label={`${item.maxPlayers} joueurs max`}
+                  label={`${item.players.length}/${item.maxPlayers} inscrits`}
                 />
               </View>
 
-              <View
-                style={[
-                  styles.levelWarning,
-                  !showLevelWarning && { opacity: 0 },
-                ]}
-              >
-                <SymbolView
-                  name={{
-                    ios: "info.circle.fill",
-                    android: "info",
-                    web: "info",
-                  }}
-                  size={14}
-                  tintColor={Palette.warning}
-                />
-                <Text style={styles.levelWarningText}>
-                  Niveau requis : {getLevelLabel(item.levelMin, item.levelMax)}{" "}
-                  — votre niveau ne correspond pas
-                </Text>
-              </View>
-
-              {/* Players grid */}
               <Text style={styles.sectionTitle}>Participants</Text>
               <View style={styles.grid}>
                 {rows.map((row, rowIdx) => (
@@ -211,85 +131,32 @@ export function ClassDetailModal({ item, visible, profile, onClose }: Props) {
                         );
                       }
 
-                      const slotKey = `${rowIdx}-${colIdx}`;
-                      const canJoin = !isEnrolled && levelOk;
-                      const isThisSlotLoading =
-                        isJoining && joiningSlotKey === slotKey;
                       return (
-                        <Pressable
-                          key={slotKey}
-                          style={[
-                            styles.playerCard,
-                            styles.emptySlot,
-                            !canJoin && styles.emptySlotDisabled,
-                          ]}
-                          onPress={
-                            canJoin
-                              ? () => {
-                                  setJoiningSlotKey(slotKey);
-                                  join();
-                                }
-                              : undefined
-                          }
-                          disabled={!canJoin || isJoining}
+                        <View
+                          key={`empty-${rowIdx}-${colIdx}`}
+                          style={[styles.playerCard, styles.emptySlot]}
                         >
-                          <View style={styles.slotIconWrap}>
-                            {isThisSlotLoading ? (
-                              <ActivityIndicator
-                                size="small"
-                                color={Palette.primary}
-                              />
-                            ) : (
-                              <SymbolView
-                                name={{
-                                  ios: "plus.circle.fill",
-                                  android: "add_circle",
-                                  web: "add_circle",
-                                }}
-                                size={28}
-                                tintColor={
-                                  canJoin ? Palette.primary : Palette.textMuted
-                                }
-                              />
-                            )}
+                          <View style={styles.emptyAvatar}>
+                            <SymbolView
+                              name={{
+                                ios: "person.fill",
+                                android: "person",
+                                web: "person",
+                              }}
+                              size={20}
+                              tintColor={Palette.border}
+                            />
                           </View>
-                          <Text
-                            style={[
-                              styles.emptySlotText,
-                              !canJoin && styles.emptySlotTextDisabled,
-                            ]}
-                          >
-                            Place libre
-                          </Text>
-                        </Pressable>
+                          <Text style={styles.emptySlotText}>Place libre</Text>
+                        </View>
                       );
                     })}
-                    {/* Fill row if odd number of maxPlayers */}
                     {row[1] === undefined && (
                       <View style={[styles.playerCard, { opacity: 0 }]} />
                     )}
                   </View>
                 ))}
               </View>
-
-              <Pressable
-                style={[styles.leaveBtn, !isEnrolled && { opacity: 0 }]}
-                onPress={isEnrolled ? () => leave() : undefined}
-                disabled={!isEnrolled || isLeaving}
-              >
-                <Text
-                  style={[styles.leaveBtnText, { opacity: isLeaving ? 0 : 1 }]}
-                >
-                  Quitter la session
-                </Text>
-                {isLeaving && (
-                  <ActivityIndicator
-                    size="small"
-                    color={Palette.error}
-                    style={StyleSheet.absoluteFill}
-                  />
-                )}
-              </Pressable>
             </ScrollView>
           </SafeAreaView>
         </View>
@@ -439,55 +306,21 @@ const styles = StyleSheet.create({
     color: Palette.textMuted,
   },
 
-  slotIconWrap: {
-    width: 28,
-    height: 28,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   emptySlot: {
     borderStyle: "dashed",
     backgroundColor: Palette.white,
   },
-  emptySlotDisabled: {
-    opacity: 0.4,
+  emptyAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Palette.surfaceSubtle,
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptySlotText: {
     fontSize: FontSize.xs,
     fontWeight: "600",
-    color: Palette.primary,
-  },
-  emptySlotTextDisabled: {
-    color: Palette.textMuted,
-  },
-
-  levelWarning: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.one,
-    backgroundColor: Palette.warningLight,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.one + 2,
-    borderRadius: Radius.md,
-    marginBottom: Spacing.two,
-  },
-  levelWarningText: {
-    fontSize: FontSize.xs,
-    fontWeight: "600",
-    color: Palette.warning,
-    flex: 1,
-  },
-  leaveBtn: {
-    marginTop: Spacing.three,
-    paddingVertical: Spacing.two + 2,
-    borderRadius: Radius.lg,
-    borderWidth: 1.5,
-    borderColor: Palette.error,
-    alignItems: "center",
-  },
-  leaveBtnText: {
-    fontSize: FontSize.sm,
-    fontWeight: "700",
-    color: Palette.error,
+    color: Palette.border,
   },
 });

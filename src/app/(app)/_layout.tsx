@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 
@@ -7,9 +8,13 @@ import { useAuth } from '@/context/auth';
 export default function AppLayout() {
   const { token } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!token) router.replace('/(auth)/login');
+    if (!token) {
+      queryClient.clear();
+      router.replace('/(auth)/login');
+    }
   }, [token]);
 
   if (!token) return null;
