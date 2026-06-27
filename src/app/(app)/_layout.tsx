@@ -1,8 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { Tabs, useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { useRouter } from 'expo-router';
 
-import AppTabs from '@/components/app-tabs';
+import { TabBar } from '@/components/ui/tab-bar';
 import { useAuth } from '@/context/auth';
 
 export default function AppLayout() {
@@ -19,5 +19,13 @@ export default function AppLayout() {
 
   if (!token) return null;
 
-  return <AppTabs />;
+  return (
+    <Tabs
+      tabBar={(props) => <TabBar {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Tabs.Screen name="index" />
+      <Tabs.Screen name="messages" />
+    </Tabs>
+  );
 }
