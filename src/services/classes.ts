@@ -74,6 +74,18 @@ const classesService = {
     const { data } = await client.delete<ApiResponse<Class>>(`/classes/${id}/join`);
     return data.data;
   },
+
+  createBulk: async (classes: BulkClassInput[]): Promise<void> => {
+    await client.post('/classes', { classes });
+  },
+};
+
+export type BulkClassInput = {
+  scheduledAt: string;
+  duration: number;
+  location: string;
+  levelMin: number;
+  levelMax: number;
 };
 
 export default classesService;
