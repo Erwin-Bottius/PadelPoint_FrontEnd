@@ -47,6 +47,10 @@ export function formatTime(iso: string): string {
 
 export function weekRangeLabel(weekStart: Date): string {
   const end = addDays(weekStart, 6);
-  const month = MONTH_NAMES[weekStart.getMonth()].toLowerCase();
-  return `${weekStart.getDate()} – ${end.getDate()} ${month}`;
+  const startMonth = MONTH_NAMES[weekStart.getMonth()].toLowerCase();
+  const endMonth = MONTH_NAMES[end.getMonth()].toLowerCase();
+  if (weekStart.getMonth() === end.getMonth()) {
+    return `${weekStart.getDate()} – ${end.getDate()} ${startMonth}`;
+  }
+  return `${weekStart.getDate()} ${startMonth} – ${end.getDate()} ${endMonth}`;
 }

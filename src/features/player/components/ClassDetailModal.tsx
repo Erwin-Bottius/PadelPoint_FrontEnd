@@ -27,30 +27,28 @@ type Props = {
   visible: boolean;
   profile: User | null;
   onClose: () => void;
+  onOpenChat?: (classId: string) => void;
 };
 
 
 
-export function ClassDetailModal({ item, visible, profile, onClose }: Props) {
+export function ClassDetailModal({ item, visible, profile, onClose, onOpenChat }: Props) {
   const queryClient = useQueryClient();
   const [joiningSlotKey, setJoiningSlotKey] = useState<string | null>(null);
 
-  function updateCache(updated: Class) {
-    queryClient.setQueriesData<Class[]>(
-      { queryKey: ["classes"], exact: false },
-      (old) => old?.map((c) => (c.id === updated.id ? updated : c)),
-    );
+  function invalidateClasses() {
+    queryClient.invalidateQueries({ queryKey: ['classes'] });
   }
 
   const { mutate: join, isPending: isJoining } = useMutation({
     mutationFn: () => classesService.join(item!.id),
-    onSuccess: updateCache,
+    onSuccess: invalidateClasses,
     onSettled: () => setJoiningSlotKey(null),
   });
 
   const { mutate: leave, isPending: isLeaving } = useMutation({
     mutationFn: () => classesService.leave(item!.id),
-    onSuccess: updateCache,
+    onSuccess: invalidateClasses,
   });
 
   if (!item) return null;
@@ -264,6 +262,19 @@ export function ClassDetailModal({ item, visible, profile, onClose }: Props) {
               </View>
 
               <Pressable
+                style={[styles.chatBtn, (!isEnrolled || !onOpenChat) && { opacity: 0 }]}
+                onPress={isEnrolled && onOpenChat ? () => onOpenChat(item.id) : undefined}
+                disabled={!isEnrolled || !onOpenChat}
+              >
+                <SymbolView
+                  name={{ ios: "bubble.left.and.bubble.right.fill", android: "chat", web: "chat" }}
+                  size={16}
+                  tintColor={Palette.white}
+                />
+                <Text style={styles.chatBtnText}>Chat du cours</Text>
+              </Pressable>
+
+              <Pressable
                 style={[styles.leaveBtn, !isEnrolled && { opacity: 0 }]}
                 onPress={isEnrolled ? () => leave() : undefined}
                 disabled={!isEnrolled || isLeaving}
@@ -468,8 +479,23 @@ const styles = StyleSheet.create({
     color: Palette.warning,
     flex: 1,
   },
-  leaveBtn: {
+  chatBtn: {
     marginTop: Spacing.three,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.two,
+    paddingVertical: Spacing.two + 2,
+    borderRadius: Radius.lg,
+    backgroundColor: Palette.primary,
+  },
+  chatBtnText: {
+    fontSize: FontSize.sm,
+    fontWeight: "700",
+    color: Palette.white,
+  },
+  leaveBtn: {
+    marginTop: Spacing.two,
     paddingVertical: Spacing.two + 2,
     borderRadius: Radius.lg,
     borderWidth: 1.5,

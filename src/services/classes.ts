@@ -43,25 +43,14 @@ export type Class = {
 
 const classesService = {
   getAll: async (params?: { startDate?: string; endDate?: string }): Promise<Class[]> => {
-    const { data } = await client.get<ApiResponse<Class[]>>('/classes', { params });
+    const { data } = await client.get<ApiResponse<Class[]>>('/classes', {
+      params: params ? { start_date: params.startDate, end_date: params.endDate } : undefined,
+    });
     return data.data;
   },
 
   getById: async (id: string): Promise<Class> => {
     const { data } = await client.get<ApiResponse<Class>>(`/classes/${id}`);
-    return data.data;
-  },
-
-  create: async (payload: {
-    name: string;
-    description?: string;
-    level: number;
-    maxPlayers: number;
-    scheduledAt: string;
-    durationMinutes: number;
-    location: string;
-  }): Promise<Class> => {
-    const { data } = await client.post<ApiResponse<Class>>('/classes', payload);
     return data.data;
   },
 
@@ -76,7 +65,7 @@ const classesService = {
   },
 
   createBulk: async (classes: BulkClassInput[]): Promise<void> => {
-    await client.post('/classes', { classes });
+    await client.post('/classes', { classes: classes.map((c) => ({ ...c, isPublished: true })) });
   },
 };
 

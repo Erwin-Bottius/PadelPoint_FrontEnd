@@ -58,6 +58,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setIsLoading(false));
   }, []);
 
+  useEffect(() => {
+    tokenStore.setOnUnauthorized(() => {
+      tokenStore.set(null);
+      SecureStore.deleteItemAsync(TOKEN_KEY);
+      setToken(null);
+      setUser(null);
+    });
+  }, []);
+
   async function signIn(email: string, password: string) {
     const { data } = await client.post<{ data: { token: string } }>('/auth/login', { email, password });
     const jwt = data.data.token;

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { FontSize, Palette, Radius, Spacing } from "@/constants/theme";
 import { PlanningModal } from "@/features/teacher/screens/PlanningModal";
+import messagesService from "@/services/messages";
 import playersService from "@/services/players";
 
 type Route = { key: string; name: string };
@@ -41,6 +42,12 @@ export function TabBar({ state, navigation }: Props) {
   });
   const isTeacher = profile?.role === "teacher";
 
+  const { data: chats = [] } = useQuery({
+    queryKey: ["chats"],
+    queryFn: messagesService.getChats,
+  });
+  const totalUnread = chats.reduce((sum, c) => sum + c.unreadCount, 0);
+
   const routes = state.routes;
   const indexRoute = routes.find((r) => r.name === "index");
   const messagesRoute = routes.find((r) => r.name === "messages");
@@ -50,6 +57,7 @@ export function TabBar({ state, navigation }: Props) {
     const isActive = state.index === routeIndex;
     const config = TAB_CONFIG[route.name];
     if (!config) return null;
+    const showDot = route.name === "messages" && totalUnread > 0;
 
     return (
       <Pressable
@@ -59,11 +67,14 @@ export function TabBar({ state, navigation }: Props) {
         hitSlop={8}
       >
         <View style={[styles.pill, isActive && styles.pillActive]}>
-          <SymbolView
-            name={config.icon}
-            size={20}
-            tintColor={isActive ? Palette.textPrimary : Palette.textMuted}
-          />
+          <View>
+            <SymbolView
+              name={config.icon}
+              size={20}
+              tintColor={isActive ? Palette.textPrimary : Palette.textMuted}
+            />
+            {showDot && <View style={styles.dot} />}
+          </View>
           <Text style={[styles.label, isActive && styles.labelActive]}>
             {config.label}
           </Text>
@@ -134,6 +145,17 @@ const styles = StyleSheet.create({
   labelActive: {
     color: Palette.textPrimary,
     fontWeight: "700",
+  },
+  dot: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    width: 8,
+    height: 8,
+    borderRadius: Radius.full,
+    backgroundColor: Palette.error,
+    borderWidth: 1.5,
+    borderColor: Palette.white,
   },
   plusBtn: {
     width: 48,

@@ -1,24 +1,43 @@
 import { client } from '@/lib/api';
-import type { ApiResponse } from '@/types/api';
+import type { Class } from './classes';
+
+export type Chat = Class & { unreadCount: number };
 
 export type Message = {
   id: string;
-  classId: string;
-  senderId: string;
-  senderName: string;
   content: string;
+  type?: 'user_left';
   createdAt: string;
+  author: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+  };
+};
+
+export type SocketMessage = Message & { classId: string };
+
+export type MessagePage = {
+  data: Message[];
+  meta: { currentPage: number; lastPage: number; total: number };
 };
 
 const messagesService = {
-  getByClass: async (classId: string): Promise<Message[]> => {
-    const { data } = await client.get<ApiResponse<Message[]>>(`/classes/${classId}/messages`);
+  getChats: async (): Promise<Chat[]> => {
+    const { data } = await client.get<{ data: Chat[] }>('/account/chats');
     return data.data;
   },
 
-  send: async (classId: string, content: string): Promise<Message> => {
-    const { data } = await client.post<ApiResponse<Message>>(`/classes/${classId}/messages`, { content });
-    return data.data;
+  getMessages: async (classId: string, page = 1): Promise<MessagePage> => {
+    const { data } = await client.get<MessagePage>(`/classes/${classId}/messages`, {
+      params: { page, limit: 50 },
+    });
+    return data;
+  },
+
+  registerPushToken: async (token: string): Promise<void> => {
+    await client.post('/account/push-token', { token });
   },
 };
 

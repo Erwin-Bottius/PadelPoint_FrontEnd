@@ -22,11 +22,12 @@ type Props = {
   item: Class | null;
   visible: boolean;
   onClose: () => void;
+  onOpenChat?: (classId: string) => void;
 };
 
 
 
-export function TeacherDetailModal({ item, visible, onClose }: Props) {
+export function TeacherDetailModal({ item, visible, onClose, onOpenChat }: Props) {
   if (!item) return null;
 
   const slots = Array.from(
@@ -157,6 +158,19 @@ export function TeacherDetailModal({ item, visible, onClose }: Props) {
                   </View>
                 ))}
               </View>
+
+              <Pressable
+                style={[styles.chatBtn, !onOpenChat && { opacity: 0 }]}
+                onPress={onOpenChat ? () => onOpenChat(item.id) : undefined}
+                disabled={!onOpenChat}
+              >
+                <SymbolView
+                  name={{ ios: "bubble.left.and.bubble.right.fill", android: "chat", web: "chat" }}
+                  size={16}
+                  tintColor={Palette.white}
+                />
+                <Text style={styles.chatBtnText}>Chat du cours</Text>
+              </Pressable>
             </ScrollView>
           </SafeAreaView>
         </View>
@@ -322,5 +336,20 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: "600",
     color: Palette.border,
+  },
+  chatBtn: {
+    marginTop: Spacing.three,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.two,
+    paddingVertical: Spacing.two + 2,
+    borderRadius: Radius.lg,
+    backgroundColor: Palette.primary,
+  },
+  chatBtnText: {
+    fontSize: FontSize.sm,
+    fontWeight: "700",
+    color: Palette.white,
   },
 });

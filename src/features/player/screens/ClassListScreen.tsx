@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -12,10 +13,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppHeader } from "@/components/ui/app-header";
 import { FontSize, Palette, Spacing } from "@/constants/theme";
 import { useAuth } from "@/context/auth";
+import { WeekStrip } from "@/features/common/components/WeekStrip";
 import { ClassCard } from "@/features/player/components/ClassCard";
 import { ClassDetailModal } from "@/features/player/components/ClassDetailModal";
 import { InfoCard } from "@/features/player/components/InfoCard";
-import { WeekStrip } from "@/features/common/components/WeekStrip";
 import classesService, { type Class } from "@/services/classes";
 import playersService from "@/services/players";
 import {
@@ -31,21 +32,25 @@ type Section = {
 };
 
 function dayKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 export default function ClassListScreen() {
   const { signOut } = useAuth();
+  const router = useRouter();
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
+  const todayStr = dayKey(now);
   const weekStart = getWeekStart(addDays(now, weekOffset * 7));
   const weekEnd = addDays(weekStart, 7);
-  const weekStartStr = weekStart.toISOString().slice(0, 10);
+  const weekStartStr = dayKey(weekStart);
   const startDate = weekOffset === 0 ? todayStr : weekStartStr;
-  const endDate = weekEnd.toISOString().slice(0, 10);
+  const endDate = dayKey(weekEnd);
 
   const { data: profile } = useQuery({
     queryKey: ["profile"],
@@ -60,12 +65,10 @@ export default function ClassListScreen() {
     queryKey: ["classes", startDate, endDate],
     queryFn: () => classesService.getAll({ startDate, endDate }),
   });
-
   const userId = profile?.id;
   const selectedClass = selectedClassId
     ? (classes.find((c) => c.id === selectedClassId) ?? null)
     : null;
-
   const sections: Section[] = Array.from({ length: 7 }, (_, i) => {
     const day = addDays(weekStart, i);
     const dayClasses = classes
@@ -177,6 +180,10 @@ export default function ClassListScreen() {
         visible={!!selectedClass}
         profile={profile ?? null}
         onClose={() => setSelectedClassId(null)}
+        onOpenChat={(classId) => {
+          setSelectedClassId(null);
+          setTimeout(() => router.push(`/chat/${classId}`), 300);
+        }}
       />
     </View>
   );

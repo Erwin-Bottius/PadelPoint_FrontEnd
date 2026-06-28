@@ -1,14 +1,17 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { Tabs, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 
-import { TabBar } from '@/components/ui/tab-bar';
 import { useAuth } from '@/context/auth';
+import { SocketProvider } from '@/context/socket';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
-export default function AppLayout() {
+function AppStack() {
   const { token } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  usePushNotifications();
 
   useEffect(() => {
     if (!token) {
@@ -20,12 +23,17 @@ export default function AppLayout() {
   if (!token) return null;
 
   return (
-    <Tabs
-      tabBar={(props) => <TabBar {...props} />}
-      screenOptions={{ headerShown: false }}
-    >
-      <Tabs.Screen name="index" />
-      <Tabs.Screen name="messages" />
-    </Tabs>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="chat/[classId]" />
+    </Stack>
+  );
+}
+
+export default function AppLayout() {
+  return (
+    <SocketProvider>
+      <AppStack />
+    </SocketProvider>
   );
 }

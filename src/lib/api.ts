@@ -45,6 +45,7 @@ client.interceptors.response.use(
   (error: AxiosError<ErrorBody>) => {
     const status = error.response?.status ?? 0;
     const body = error.response?.data;
+    if (status === 401) tokenStore.triggerUnauthorized();
     return Promise.reject(
       new ApiError(status, body?.message ?? 'Une erreur est survenue.', body?.errors),
     );
